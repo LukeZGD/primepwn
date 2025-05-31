@@ -1,0 +1,30 @@
+name: Compile steaks4uce-c
+on: [push]
+jobs:
+  linux-limd:
+    strategy:
+      matrix:
+        arch:
+          - runner: ubuntu-22.04
+            name: x86_64
+          - runner: ubuntu-22.04-arm
+            name: aarch64
+
+    name: linux-${{ matrix.arch.name }}
+    runs-on: ${{ matrix.arch.runner }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run compile script
+        run: ./compile.sh
+
+      - name: Zip steaks4uce-c
+        run: zip -r steaks4uce-c_linux-${{ matrix.arch.name }}.zip steaks4uce
+
+      - name: Update latest release
+        uses: pyTooling/Actions/releaser/composite@main
+        with:
+          tag: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: steaks4uce-c_linux-${{ matrix.arch.name }}.zip

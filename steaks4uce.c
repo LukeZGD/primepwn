@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <assert.h>
 
 #include "steaks4uce.h"
 #include <libirecovery.h>
@@ -159,8 +158,6 @@ int main() {
 
     printf("Releasing device handle.\n");
     irecv_close(client);
-
-    usleep(10000);
 
     printf("Acquiring device handle.\n");
     err = irecv_open_with_ecid(&client, 0);
