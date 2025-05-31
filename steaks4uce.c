@@ -89,7 +89,7 @@ unsigned char payload[0x138] = {0};
 
 int main() {
     irecv_error_t error = IRECV_E_SUCCESS;
-    int i, ret, new;
+    int ret;
 
     uint32_t data[] = {
         0x84,           // 0x00: previous_chunk
