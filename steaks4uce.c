@@ -134,26 +134,26 @@ int main() {
     printf("Resetting USB counters.\n");
     ret = irecv_reset_counters(client);
     if (ret < 0) {
-        printf("Failed to reset USB counters.\n");
+        printf("ERROR: Failed to reset USB counters.\n");
         return -1;
     }
 
     printf("Uploading patched shellcode for %s: %#x of data\n", devinfo->srtg, steaks4uce_shellcode_len);
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, steaks4uce_shellcode, steaks4uce_shellcode_len, 5000);
     if (ret < 0) {
-        printf("Failed to send steaks4uce to the device.\n");
+        printf("ERROR: Failed to send steaks4uce to the device.\n");
         return -1;
     }
 
     printf("Uploading payload: %#zx of data\n", sizeof(payload));
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, payload, sizeof(payload), 5000);
     if (ret < 0) {
-        printf("Failed to upload payload.\n");
+        printf("ERROR: Failed to upload payload.\n");
         return -1;
     }
     ret = irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
     if (ret != sizeof(payload)) {
-        printf("Failed to execute steaks4uce.\n");
+        printf("ERROR: Failed to execute steaks4uce.\n");
         return -1;
     }
 
@@ -168,7 +168,7 @@ int main() {
     printf("Reconnecting to device.\n");
     client = irecv_reconnect(client, 2);
     if (client == NULL) {
-        printf("ERROR: Unable to reconnect to device\n");
+        printf("ERROR: Unable to reconnect to device.\n");
         return -1;
     }
 
