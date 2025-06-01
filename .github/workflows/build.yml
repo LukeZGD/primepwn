@@ -1,4 +1,4 @@
-name: Compile steaks4uce-c
+name: Compile primepwn
 on: [push]
 jobs:
   linux-limd:
@@ -19,12 +19,12 @@ jobs:
       - name: Run compile script
         run: ./compile.sh
 
-      - name: Zip steaks4uce-c
-        run: zip -r steaks4uce-c_linux-${{ matrix.arch.name }}.zip steaks4uce
+      - name: Zip primepwn
+        run: zip -r primepwn_linux-${{ matrix.arch.name }}.zip primepwn
 
       - name: Update latest release
         uses: pyTooling/Actions/releaser/composite@main
         with:
           tag: latest
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: steaks4uce-c_linux-${{ matrix.arch.name }}.zip
+          files: primepwn_linux-${{ matrix.arch.name }}.zip

@@ -59,15 +59,15 @@ if [[ $OSTYPE == "linux"* ]]; then
     echo "Building libirecovery..."
     cd $FR_BASE
     cd libirecovery
-    cp ../../steaks4uce.h include/
-    cp ../../steaks4uce.c tools/irecovery.c
+    cp ../../*.h include/
+    cp ../../primepwn.c tools/irecovery.c
     ./autogen.sh $CONF_ARGS $CC_ARGS
     make $JNUM
     sudo make $JNUM install
 
     cd $FR_BASE
     cd ..
-    cp /usr/local/bin/irecovery steaks4uce
+    cp /usr/local/bin/irecovery primepwn
 fi
 
 echo "Done!"
