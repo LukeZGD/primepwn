@@ -423,6 +423,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    if (!strstr(devinfo->serial_string, "240") && !strstr(devinfo->serial_string, "359") && !strstr(devinfo->serial_string, "574")) {
+        printf("Not DFU mode! Already pwned iBSS mode?\n");
+        return 0;
+    }
+
     if (devinfo->cpid == 0x8720)
         ret = steaks4uce_exploit(client);
     else if (devinfo->cpid == 0x8930)
