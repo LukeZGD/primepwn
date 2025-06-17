@@ -358,6 +358,7 @@ int shatter_exploit(irecv_client_t client) {
 }
 
 int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
+    int ret;
     FILE *f = fopen(ibss_path, "rb");
     if (!f) {
         fprintf(stderr, "ERROR: Unable to open iBSS file\n");
@@ -390,7 +391,9 @@ int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
     irecv_usb_control_transfer(client, 0x21, 1, 0, 0, NULL, 0, 100);
     irecv_usb_control_transfer(client, 0xA1, 3, 0, 0, blank, 6, 100);
     irecv_usb_control_transfer(client, 0xA1, 3, 0, 0, blank, 6, 100);
-    send_data(client, ibss_data, ibss_len);
+    ret = send_data(client, ibss_data, ibss_len);
+    if (ret < 0)
+        return -1;
 
     irecv_usb_control_transfer(client, 0xA1, 2, 0xFFFF, 0, NULL, 0, 5000);
 
