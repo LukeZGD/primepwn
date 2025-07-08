@@ -311,6 +311,8 @@ int shatter_exploit(irecv_client_t client) {
         return -1;
 
     usb_reset(client);
+    if (ret < 0)
+        return -1;
 
     release_device(client);
 
@@ -405,6 +407,7 @@ int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
 
 int main(int argc, char* argv[]) {
     int ret;
+    int (*exploit_func)(irecv_client_t client) = NULL;
 
     irecv_client_t client = NULL;
     ret = acquire_device(&client);
@@ -413,6 +416,7 @@ int main(int argc, char* argv[]) {
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[");
+
     if (argc > 1) {
         if (p) {
             ret = boot_unpacked_ibss(client, argv[1]);
@@ -426,19 +430,19 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if (!strstr(devinfo->serial_string, "240") && !strstr(devinfo->serial_string, "359") && !strstr(devinfo->serial_string, "574")) {
-        printf("Not DFU mode! Already pwned iBSS mode?\n");
-        return 0;
-    }
-
     if (devinfo->cpid == 0x8720)
-        ret = steaks4uce_exploit(client);
+        exploit_func = steaks4uce_exploit;
     else if (devinfo->cpid == 0x8930)
-        ret = shatter_exploit(client);
+        exploit_func = shatter_exploit;
     else {
         fprintf(stderr, "ERROR: Device is not an iPod touch 2nd generation or A4 device (CPID: %#x)\n", devinfo->cpid);
         return -1;
     }
 
-    return ret;
+    if (!strstr(devinfo->serial_string, "240") && !strstr(devinfo->serial_string, "359") && !strstr(devinfo->serial_string, "574")) {
+        printf("Not DFU mode! Already pwned iBSS mode?\n");
+        return 0;
+    }
+
+    return exploit_func(client);
 }
