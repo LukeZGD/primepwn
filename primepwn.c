@@ -120,14 +120,10 @@ int reset_counters(irecv_client_t client) {
     return ret;
 }
 
-int usb_reset(irecv_client_t client) {
+void usb_reset(irecv_client_t client) {
     printf("Performing USB port reset.\n");
-    int ret = irecv_reset(client);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Unable to USB port reset.\n");
-        return -1;
-    }
-    return ret;
+    irecv_reset(client);
+    return;
 }
 
 int send_data(irecv_client_t client, const unsigned char* data, size_t data_len) {
@@ -179,7 +175,8 @@ int request_image_validation(irecv_client_t client) {
         }
     }
 
-    return usb_reset(client);
+    usb_reset(client);
+    return 0;
 }
 
 int steaks4uce_exploit(irecv_client_t client) {
@@ -270,9 +267,7 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = usb_reset(client);
-    if (ret < 0)
-        return -1;
+    usb_reset(client);
 
     release_device(client);
 
@@ -311,8 +306,6 @@ int shatter_exploit(irecv_client_t client) {
         return -1;
 
     usb_reset(client);
-    if (ret < 0)
-        return -1;
 
     release_device(client);
 
