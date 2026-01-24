@@ -448,9 +448,7 @@ int execute(irecv_client_t client, const unsigned char *cmd_buf, size_t cmd_len,
     if (ret < 0)
         return -1;
 
-    ret = usb_reset(client);
-    if (ret < 0)
-        return -1;
+    usb_reset(client);
 
     release_device(client);
 
