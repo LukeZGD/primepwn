@@ -293,11 +293,7 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x40, &buffer);
-    if (ret < 0) {
-        free(buffer);
-        return -1;
-    }
+    get_data(client, 0x40, &buffer);
 
     usb_reset(client);
 
@@ -317,11 +313,7 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x2C000, &buffer);
-    if (ret < 0) {
-        free(buffer);
-        return -1;
-    }
+    get_data(client, 0x2C000, &buffer);
 
     release_device(client);
 
@@ -335,11 +327,7 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x140, &buffer);
-    if (ret < 0) {
-        free(buffer);
-        return -1;
-    }
+    get_data(client, 0x140, &buffer);
 
     usb_reset(client);
 
@@ -363,11 +351,7 @@ int shatter_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    ret = get_data(client, 0x2C000, &buffer);
-    if (ret < 0) {
-        free(buffer);
-        return -1;
-    }
+    get_data(client, 0x2C000, &buffer);
     free(buffer);
 
     release_device(client);
