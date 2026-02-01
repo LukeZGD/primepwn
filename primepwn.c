@@ -249,11 +249,7 @@ int steaks4uce_exploit(irecv_client_t client) {
         return -1;
 
     printf("Triggering the exploit.\n");
-    ret = irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
-    if (ret != sizeof(payload)) {
-        fprintf(stderr, "ERROR: Failed to execute steaks4uce.\n");
-        return -1;
-    }
+    irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
 
     release_device(client);
 
