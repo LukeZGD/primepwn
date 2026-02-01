@@ -170,7 +170,7 @@ int get_data(irecv_client_t client, size_t amount, unsigned char **out_data) {
 
         ret = irecv_usb_control_transfer(client, 0xA1, 2, 0, 0, data + offset, chunk, 5000);
         if (ret < 0) {
-            fprintf(stderr, "ERROR: USB control transfer failed with code %d.\n", ret);
+            //fprintf(stderr, "ERROR: USB control transfer failed with code %d.\n", ret);
             free(data);
             return ret;
         }
