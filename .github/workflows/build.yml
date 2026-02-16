@@ -1,7 +1,7 @@
 name: Compile primepwn
 on: [push]
 jobs:
-  linux-limd:
+  primepwn-linux:
     strategy:
       matrix:
         arch:
@@ -26,5 +26,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload latest primepwn_linux-${{ matrix.arch.name }}.zip --clobber -R ${{ github.repository }}
-          gh release edit latest --target ${{ github.sha }} -R ${{ github.repository }}
+          gh release upload latest \
+            primepwn_linux-${{ matrix.arch.name }}.zip \
+            --clobber -R ${{ github.repository }}
+
+          gh release edit latest \
+            --title "Latest" \
+            --target ${{ github.sha }} -R ${{ github.repository }}
