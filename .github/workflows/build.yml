@@ -22,14 +22,8 @@ jobs:
       - name: Zip primepwn
         run: zip -r primepwn_linux-${{ matrix.arch.name }}.zip primepwn
 
-      - name: Update latest release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload latest \
-            primepwn_linux-${{ matrix.arch.name }}.zip \
-            --clobber -R ${{ github.repository }}
-
-          gh release edit latest \
-            --title "Latest" \
-            --target ${{ github.sha }} -R ${{ github.repository }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: primepwn_linux-${{ matrix.arch.name }}.zip
+          path: primepwn_linux-${{ matrix.arch.name }}.zip

@@ -897,9 +897,7 @@ int main(int argc, char* argv[]) {
 
     if (devinfo->cpid == 0x8720)
         exploit_func = steaks4uce_exploit;
-    else if (devinfo->cpid == 0x8930)
-        exploit_func = shatter_exploit;
-    else if (devinfo->cpid == 0x8920 || devinfo->cpid == 0x8922)
+    else if (devinfo->cpid == 0x8920 || devinfo->cpid == 0x8922 || devinfo->cpid == 0x8930)
         exploit_func = limera1n_exploit;
     else {
         fprintf(stderr, "ERROR: Device is not supported (CPID: %#x)\n", devinfo->cpid);
