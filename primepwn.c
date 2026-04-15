@@ -583,12 +583,12 @@ int limera1n_exploit(irecv_client_t client) {
         return -1;
 
     printf("Sending fake data.\n");
-    irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, assert, 1, 1000);
+    irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, assert, 1, 100);
 
-    irecv_usb_control_transfer(client, 0x21, 1, 0, 0, buf, 0x800, 10);
+    irecv_async_usb_control_transfer_with_cancel(client, 0x21, 1, 0, 0, buf, 0x800, 10000);
 
     printf("Executing exploit.\n");
-    ret = irecv_usb_control_transfer(client, 0x21, 2, 0, 0, NULL, 0, 100);
+    irecv_usb_control_transfer(client, 0x21, 2, 0, 0, NULL, 0, 100);
 
     usb_reset(client);
 
@@ -598,6 +598,7 @@ int limera1n_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
+    printf("Finish transfer.\n");
     ret = irecv_finish_transfer(client);
     if (ret < 0)
         return -1;

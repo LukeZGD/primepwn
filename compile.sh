@@ -38,9 +38,9 @@ if [[ $OSTYPE == "linux"* ]]; then
     echo "Done"
 
     echo "Cloning git repos and other deps"
-    git clone https://github.com/LukeeGD/libplist
-    git clone https://github.com/LukeeGD/libimobiledevice-glue
-    git clone https://github.com/LukeeGD/libirecovery
+    git clone https://github.com/libimobiledevice/libplist
+    git clone https://github.com/libimobiledevice/libimobiledevice-glue
+    git clone https://github.com/synackuk/libirecovery
 
     echo "Building libplist..."
     cd $FR_BASE
