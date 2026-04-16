@@ -556,6 +556,7 @@ int limera1n_exploit(irecv_client_t client) {
     unsigned char assert[1];
     unsigned char buf[0x800];
     memset(buf, 'A', 0x800);
+    printf("*** based on limera1n exploit (heap overflow) by geohot ***\n");
 
     if(gen_limera1n(client, &payload, &payload_len) != 0) {
         fprintf(stderr, "Failed to generate payload!\n");
@@ -847,6 +848,7 @@ int nor_dump(irecv_client_t client, int save_backup) {
 int main(int argc, char* argv[]) {
     int ret;
     int (*exploit_func)(irecv_client_t client) = NULL;
+    printf("*** primepwn by LukeZGD ***\n");
 
     irecv_client_t client = NULL;
     ret = acquire_device(&client);
