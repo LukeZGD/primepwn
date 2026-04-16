@@ -1,6 +1,6 @@
 # primepwn
 
-Implementation of steaks4uce and SHAtter exploits from ipwndfu in C, as well as an option to send unpacked iBSS for pwned A5(X) and A6(X) devices.
+Implementation of steaks4uce, limera1n, and SHAtter exploits from ipwndfu in C, as well as an option to send unpacked iBSS for pwned A5(X) and A6(X) devices.
 
 ## Features
 
