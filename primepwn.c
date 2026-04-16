@@ -298,7 +298,6 @@ int reset_counters(irecv_client_t client) {
 void usb_reset(irecv_client_t client) {
     printf("Performing USB port reset.\n");
     irecv_reset(client);
-    return;
 }
 
 int reconnect(irecv_client_t *client) {
@@ -599,6 +598,8 @@ int limera1n_exploit(irecv_client_t client) {
         release_device(client);
         return -1;
     }
+
+    release_device(client);
 
     printf("Device is now in pwned DFU mode.\n");
     return 0;
