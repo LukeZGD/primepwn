@@ -331,7 +331,7 @@ int steaks4uce_exploit(irecv_client_t client) {
         uint32_t val;
         memcpy(&val, steaks4uce_shellcode + placeholders_offset + (4 * i), 4);
         if (val != (0xBAD00001 + i)) {
-            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08x, got 0x%08x)\n", i, 0xBAD00001 + i, val);
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08lx, got 0x%08x)\n", i, 0xBAD00001 + i, val);
             return -1;
         }
         memcpy(steaks4uce_shellcode + placeholders_offset + (4 * i), &constants[i], 4);
@@ -514,7 +514,7 @@ int limera1n_generate_payload(irecv_client_t client, unsigned char **payload, si
         uint32_t val;
         memcpy(&val, shellcode + placeholders_offset + (4 * i), 4);
         if (val != (0xBAD00001 + i)) {
-            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08x, got 0x%08x)\n", i, 0xBAD00001 + i, val);
+            fprintf(stderr, "ERROR: Placeholder mismatch at index %zu (expected 0x%08lx, got 0x%08x)\n", i, 0xBAD00001 + i, val);
             return -1;
         }
     }
