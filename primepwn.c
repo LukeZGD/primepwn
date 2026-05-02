@@ -635,7 +635,6 @@ int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
     }
     fclose(f);
 
-    unsigned char response_buf[0xFFFF + 1];
     unsigned char blank[16] = {0};
     send_data(client, blank, 16);
     irecv_usb_control_transfer(client, 0x21, 1, 0, 0, NULL, 0, 100);
@@ -870,7 +869,7 @@ int main(int argc, char* argv[]) {
         } else if (p && strcmp(argv[1], "--nor-flash") == 0 && devinfo->cpid == 0x8920) {
             // ret = nor_flash(client, argv[2]);
             // return ret;
-        } else if (strcmp(argv[1], "--use-limera1n") == 0 && devinfo->cpid == 0x8930) {
+        } else if (strcmp(argv[1], "--use-limera1n") == 0) {
             use_limera1n = 1;
         } else if (p) {
             ret = boot_unpacked_ibss(client, argv[1]);
