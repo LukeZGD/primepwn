@@ -2,11 +2,39 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "shatter.h"
 #include "steaks4uce.h"
 #include "limera1n.h"
 #include <libirecovery.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+
+static char *strcasestr_simple(const char *haystack, const char *needle) {
+    if (!*needle) return (char *)haystack;
+
+    for (; *haystack; haystack++) {
+        const char *h = haystack;
+        const char *n = needle;
+
+        while (*h && *n &&
+            tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+            h++;
+        n++;
+            }
+
+            if (!*n)
+                return (char *)haystack;
+    }
+    return NULL;
+}
+
+#define strcasestr strcasestr_simple
+
+#else
+#include <strings.h>
+#endif
 
 #define MAX_PACKET_SIZE 0x800
 
@@ -371,7 +399,7 @@ int steaks4uce_exploit(irecv_client_t client) {
         return -1;
 
     devinfo = irecv_get_device_info(client);
-    char* p = strstr(devinfo->serial_string, "PWND:[steaks4uce]");
+    char* p = strcasestr(devinfo->serial_string, "PWND:[steaks4uce]");
     if (!p) {
         fprintf(stderr, "ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
         release_device(client);
@@ -463,7 +491,7 @@ int shatter_exploit(irecv_client_t client) {
         return -1;
 
     const struct irecv_device_info *devinfo = irecv_get_device_info(client);
-    char* p = strstr(devinfo->serial_string, "PWND:[SHAtter]");
+    char* p = strcasestr(devinfo->serial_string, "PWND:[SHAtter]");
     if (!p) {
         fprintf(stderr, "ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
         release_device(client);
@@ -594,7 +622,7 @@ int limera1n_exploit(irecv_client_t client) {
         return -1;
 
     devinfo = irecv_get_device_info(client);
-    char* p = strstr(devinfo->serial_string, "PWND:[limera1n]");
+    char* p = strcasestr(devinfo->serial_string, "PWND:[limera1n]");
     if (!p) {
         fprintf(stderr, "ERROR: Exploit failed. Device did not enter pwned DFU mode.\n");
         release_device(client);
