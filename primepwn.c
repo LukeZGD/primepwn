@@ -906,7 +906,9 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "ERROR: Device is not in pwned DFU mode. Cannot do pwned DFU stuff.\n");
             return -1;
         }
-    } else if (p) {
+    }
+
+    if (p) {
         printf("Device is already in pwned DFU mode.\n");
         return 0;
     }
