@@ -717,6 +717,8 @@ int execute(irecv_client_t client, const unsigned char *cmd_buf, size_t cmd_len,
 
     release_device(client);
 
+    usleep(500000);
+
     ret = acquire_device(&client);
     if (ret < 0)
         return -1;
