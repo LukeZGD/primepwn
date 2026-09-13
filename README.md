@@ -11,7 +11,7 @@ C implementation of the steaks4uce, limera1n, and SHAtter bootrom exploits (port
 
 ## Building
 
-`gcc primepwn.c -o primepwn -lirecovery-1.0`
+`gcc primepwn.c -o primepwn -lirecovery-1.0` (or see `compile.sh`)
 
 ## Usage
 
