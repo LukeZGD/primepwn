@@ -9,7 +9,7 @@ echo "PREFIX: $PREFIX"
 
 set -e
 
-libplist_ver=2.0.4
+libplist_ver=2.0.12
 limd_glue_ver=1.0.0
 libirecovery_ver=1.0.5
 
@@ -112,7 +112,7 @@ elif [[ $OSTYPE == "linux"* ]]; then
     echo "Cloning git repos and other deps"
     git clone https://github.com/libimobiledevice/libplist
     git clone https://github.com/libimobiledevice/libimobiledevice-glue
-    git clone https://github.com/synackuk/libirecovery
+    git clone https://github.com/libimobiledevice/libirecovery
 
     echo "Building libplist..."
     cd $FR_BASE
