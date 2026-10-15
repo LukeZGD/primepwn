@@ -1,13 +1,13 @@
 # primepwn
 
-C implementation of the steaks4uce, limera1n, and SHAtter bootrom exploits (ported from ipwndfu), with support for sending unpacked iBSS to pwned A5(X) and A6(X) devices.
+C implementation of the steaks4uce, limera1n, and SHAtter bootrom exploits, ported from ipwndfu. Also supports sending images to pwned A5/A6/A12/A13 devices.
 
 ## Features
 
-- steaks4uce exploit (iPod touch 2nd gen)
-- limera1n exploit (iPhone 3GS, iPod touch 3rd gen)
-- SHAtter exploit (A4 devices: iPad 1, iPhone 4, iPod touch 4th gen)
-- Send unpacked iBSS to pwned A5(X) and A6(X) devices (equivalent to `ipwndfu -l`)
+- steaks4uce - iPod touch 2nd gen
+- limera1n - iPhone 3GS, iPod touch 3rd gen
+- SHAtter - A4 devices (iPad 1, iPhone 4, iPod touch 4th gen)
+- Image booting on pwned A5/A6/A12/A13 devices (equivalent to `ipwndfu -l` / `usbliter8ctl boot`)
 
 ## Building
 
@@ -15,10 +15,14 @@ C implementation of the steaks4uce, limera1n, and SHAtter bootrom exploits (port
 
 ## Usage
 
-#### Run exploit (auto-selects based on device)
+#### Run exploit for the connected device
 
-`./primepwn`
+```
+./primepwn
+```
 
-#### Send unpacked iBSS (A5/A6 devices in pwned DFU)
+#### Send an image to a device in pwned DFU mode
 
-`./primepwn [unpacked ibss]`
+```
+./primepwn <image>
+```

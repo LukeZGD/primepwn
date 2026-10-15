@@ -635,7 +635,7 @@ int limera1n_exploit(irecv_client_t client) {
     return 0;
 }
 
-int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
+int boot_ibss(irecv_client_t client, const char *ibss_path) {
     int ret;
     FILE *f = fopen(ibss_path, "rb");
     if (!f) {
@@ -678,6 +678,71 @@ int boot_unpacked_ibss(irecv_client_t client, const char *ibss_path) {
     free(ibss_data);
 
     return 0;
+}
+
+int boot_iboot(irecv_client_t client, const char *iboot_path) {
+    int ret = -1;
+    FILE *f = fopen(iboot_path, "rb");
+    unsigned char *iboot_data = NULL;
+    long file_len;
+
+    if (!f) {
+        fprintf(stderr, "ERROR: Unable to open iBoot file: %s\n", iboot_path);
+        return -1;
+    }
+
+    if (fseek(f, 0, SEEK_END) != 0 ||
+        (file_len = ftell(f)) <= 0 ||
+        fseek(f, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "ERROR: Unable to determine iBoot file size\n");
+        fclose(f);
+        return -1;
+    }
+
+    iboot_data = malloc((size_t)file_len);
+    if (!iboot_data) {
+        fprintf(stderr, "ERROR: malloc failed for iBoot data\n");
+        fclose(f);
+        return -1;
+    }
+
+    if (fread(iboot_data, 1, (size_t)file_len, f) != (size_t)file_len) {
+        fprintf(stderr, "ERROR: Failed to read iBoot file\n");
+        fclose(f);
+        free(iboot_data);
+        return -1;
+    }
+
+    fclose(f);
+
+    printf("iBoot file found: %s\n", iboot_path);
+
+    ret = send_data(client, iboot_data, (size_t)file_len);
+    if (ret < 0)
+        goto done;
+
+    ret = irecv_usb_control_transfer(client, 0x21, 1, 0, 0, NULL, 0, 100);
+    if (ret < 0) {
+        fprintf(stderr, "ERROR: Failed to finalize iBoot download\n");
+        goto done;
+    }
+
+    ret = irecv_usb_control_transfer(client, 0x21, 8, 0, 0, NULL, 0, 100);
+    if (ret < 0) {
+        fprintf(stderr, "ERROR: Custom boot request failed\n");
+        goto done;
+    }
+
+    ret = irecv_usb_control_transfer(client, 0x21, 4, 0, 0, NULL, 0, 100);
+    // if (ret < 0) {
+    //     fprintf(stderr, "WARNING: DFU_ABORT request failed\n");
+    // }
+
+    ret = 0;
+
+done:
+    free(iboot_data);
+    return ret;
 }
 
 int execute(irecv_client_t client, const unsigned char *cmd_buf, size_t cmd_len, unsigned char *recv_buf, size_t recv_len, uint32_t *retval_out) {
@@ -893,17 +958,39 @@ int main(int argc, char* argv[]) {
         memmove_off = 0x83dc;
 
     if (argc > 1) {
-        if (p && strcmp(argv[1], "--nor-dump") == 0 && devinfo->cpid == 0x8920) {
-            ret = nor_dump(client, 1);
-            return ret;
-        } else if (p && strcmp(argv[1], "--nor-flash") == 0 && devinfo->cpid == 0x8920) {
-            // ret = nor_flash(client, argv[2]);
-            // return ret;
-        } else if (strcmp(argv[1], "--use-limera1n") == 0) {
+        const char *arg = argv[1];
+        unsigned int cpid = devinfo->cpid;
+
+        if (strcmp(arg, "--use-limera1n") == 0) {
             use_limera1n = 1;
+        } else if (strcmp(arg, "--nor-dump") == 0) {
+            if (!p || cpid != 0x8920) {
+                fprintf(stderr, "ERROR: --nor-dump requires an iPhone 3GS in pwned DFU mode.\n");
+                return -1;
+            }
+            return nor_dump(client, 1);
+
+        } else if (strcmp(arg, "--nor-flash") == 0) {
+            if (!p || cpid != 0x8920) {
+                fprintf(stderr, "ERROR: --nor-flash requires an iPhone 3GS in pwned DFU mode.\n");
+                return -1;
+            }
+            return 0;
+            // return nor_flash(client, argv[2]);
+
         } else if (p) {
-            ret = boot_unpacked_ibss(client, argv[1]);
-            return ret;
+            switch (cpid) {
+                case 0x8940:
+                case 0x8942:
+                case 0x8945:
+                case 0x8947:
+                case 0x8950:
+                case 0x8955:
+                    return boot_ibss(client, arg);
+
+                default:
+                    return boot_iboot(client, arg);
+            }
         } else {
             fprintf(stderr, "ERROR: Device is not in pwned DFU mode. Cannot do pwned DFU stuff.\n");
             return -1;
