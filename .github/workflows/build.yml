@@ -14,22 +14,14 @@ jobs:
     runs-on: ${{ matrix.arch.runner }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Run compile script
         run: ./compile.sh
 
-      - name: Zip primepwn
-        run: zip -r primepwn_linux-${{ matrix.arch.name }}.zip primepwn
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: primepwn_linux-${{ matrix.arch.name }}
+          path: primepwn
 
-      - name: Update latest release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload latest \
-            primepwn_linux-${{ matrix.arch.name }}.zip \
-            --clobber -R ${{ github.repository }}
-
-          gh release edit latest \
-            --title "Latest" \
-            --target ${{ github.sha }} -R ${{ github.repository }}
